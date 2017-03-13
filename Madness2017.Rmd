@@ -1,0 +1,134 @@
+---
+title: "March Madness Analysis"
+author: "Loren Lipsey"
+date: "March 13, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(scipen = 99)
+```
+
+# March Madness Expected Value calcualation
+### For seed-weighted scoring, with Nate Silver's predictions
+
+Computes net expected value, based on the following scoring system:
+
++--------+-----------+
+| Round  |  Score    |
++========+===========+
+|First   |  1 + seed |
++--------+-----------+
+|Second  |  2 + seed |
++--------+-----------+
+|Sweet 16|  4 + seed |
++--------+-----------+
+|Elite 8 |  8 + seed |
++--------+-----------+
+|Final 4 | 16 + seed |
++--------+-----------+
+|Champ   | 32 + seed |
++--------+-----------+
+
+
+Download data from Five Thirty Eight:
+```{r data, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(knitr)
+
+NCAA_data <- read_csv("https://projects.fivethirtyeight.com/march-madness-api/2017/fivethirtyeight_ncaa_forecasts.csv")
+
+```
+
+Remove letters from seed variable:
+```{r}
+NCAA_data$team_seed <- gsub("[^0-9]", "", NCAA_data$team_seed)
+NCAA_data$team_seed <- as.numeric(NCAA_data$team_seed)
+```
+
+
+Calculate the Expected Values for each team in each round, as:
+
+## **Expected value for round = **
+## _(Cumulative value of round-dependent points_
+## _+ cumulative value of low-seed bonus points)_
+## _* chance of getting this far and winning_
+```{r}
+NCAA_EV <- NCAA_data %>%  
+  mutate(EV_second = (1 + team_seed) * rd2_win) %>%
+  mutate(EV_sweet16 = (3 + (2 * team_seed)) * rd3_win) %>%
+  mutate(EV_elite8 = (7 + (3 * team_seed)) * rd4_win) %>%
+  mutate(EV_final4 = (15 + (4 * team_seed)) * rd5_win) %>%
+  mutate(EV_champgame = (31 + (5 * team_seed)) * rd6_win) %>%
+  mutate(EV_winner = (63 + (6 * team_seed)) * rd7_win)  %>%
+  select(contains("EV"), team_seed, team_region, team_name) 
+```
+
+
+Merge EVs for teams in the play-in games:
+```{r}
+NCAA_EV <- NCAA_EV %>%
+  group_by(team_seed, team_region) %>%
+  mutate(
+    EV_second = sum(EV_second),
+    EV_sweet16 = sum(EV_sweet16),
+    EV_elite8 = sum(EV_elite8),
+    EV_final4 = sum(EV_final4),
+    EV_champgame = sum(EV_champgame),
+    EV_winner = sum(EV_winner)
+  ) %>%
+  ungroup
+```
+
+
+## Champ round top picks
+```{r}
+NCAA_EV %>%
+  select(team_name, EV_winner, EV_champgame) %>%
+  arrange(desc(EV_winner)) %>%
+  head(15) %>%
+  kable("html", digits = 2)
+```
+
+
+
+## West Region
+```{r}
+NCAA_EV %>%
+  select(team_name, team_region, EV_second, EV_sweet16, EV_elite8, EV_final4) %>%
+  filter(team_region == "West") %>%
+  arrange(desc(EV_final4)) %>%
+  kable("html", digits = 2)
+```
+
+
+
+## East Region
+```{r}
+NCAA_EV %>%
+  select(team_name, team_region, EV_second, EV_sweet16, EV_elite8, EV_final4) %>%
+  filter(team_region == "East") %>%
+  arrange(desc(EV_final4)) %>%
+  kable("html", digits = 2)
+```
+
+
+## Midwest Region
+```{r}
+NCAA_EV %>%
+  select(team_name, team_region, EV_second, EV_sweet16, EV_elite8, EV_final4) %>%
+  filter(team_region == "Midwest") %>%
+  arrange(desc(EV_final4)) %>%
+  kable("html", digits = 2)
+```
+
+
+## South Region
+```{r}
+NCAA_EV %>%
+  select(team_name, team_region, EV_second, EV_sweet16, EV_elite8, EV_final4) %>%
+  filter(team_region == "South") %>%
+  arrange(desc(EV_final4)) %>%
+  kable("html", digits = 2)
+```
