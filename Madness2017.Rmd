@@ -2,7 +2,10 @@
 title: "March Madness Analysis"
 author: "Loren Lipsey"
 date: "March 13, 2017"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -80,6 +83,13 @@ NCAA_EV <- NCAA_EV %>%
   ) %>%
   ungroup
 ```
+
+
+Write out data
+```{r}
+write_csv(NCAA_EV, "Expected Values.csv")
+```
+
 
 
 ## Champ round top picks
